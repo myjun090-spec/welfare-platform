@@ -1,9 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Role = "coordinator" | "scout" | "analyst" | "writer" | "critic" | "scribe";
 type Round = 1 | 2 | 3 | 4;
+
+interface Project {
+  id: number;
+  title: string;
+  currentRound: Round;
+  members: number;
+  status: string;
+}
 
 const roles: { id: Role; label: string; desc: string; color: string }[] = [
   {
@@ -51,33 +59,68 @@ const roundLabels: Record<Round, string> = {
   4: "수정 후 재검토",
 };
 
-const sampleProjects = [
-  {
-    id: 1,
-    title: "지역사회 돌봄 체계 분석",
-    currentRound: 3 as Round,
-    members: 5,
-    status: "진행중",
-  },
-  {
-    id: 2,
-    title: "복지 사각지대 실태조사",
-    currentRound: 2 as Round,
-    members: 4,
-    status: "진행중",
-  },
-  {
-    id: 3,
-    title: "자원봉사 효과성 연구",
-    currentRound: 1 as Round,
-    members: 6,
-    status: "진행중",
-  },
-];
-
 export default function ResearchPage() {
-  const [selectedProject, setSelectedProject] = useState(sampleProjects[0]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [formData, setFormData] = useState({ title: "", members: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  async function fetchProjects() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/research");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setProjects(data);
+      if (data.length > 0 && !selectedProject) {
+        setSelectedProject(data[0]);
+      }
+    } catch {
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSelectProject(project: Project) {
+    try {
+      const res = await fetch(`/api/research/${project.id}`);
+      if (!res.ok) throw new Error("Failed to fetch details");
+      const detail = await res.json();
+      setSelectedProject(detail);
+    } catch {
+      setSelectedProject(project);
+    }
+  }
+
+  async function handleCreateProject() {
+    if (!formData.title) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          members: Number(formData.members) || 1,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create");
+      setFormData({ title: "", members: "" });
+      setShowNewForm(false);
+      await fetchProjects();
+    } catch {
+      alert("프로젝트 생성에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div>
@@ -91,7 +134,60 @@ export default function ResearchPage() {
         </button>
       </div>
 
-      {/* 팀 역할 구조 (캡쳐3 기반) */}
+      {/* 새 프로젝트 생성 폼 */}
+      {showNewForm && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+          <h3 className="text-lg font-semibold mb-4">새 연구 프로젝트</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                프로젝트 제목
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="연구 주제를 입력하세요"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                참여 인원
+              </label>
+              <input
+                type="number"
+                value={formData.members}
+                onChange={(e) =>
+                  setFormData({ ...formData, members: e.target.value })
+                }
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="인원 수"
+                min="1"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={handleCreateProject}
+              disabled={submitting}
+              className="bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50"
+            >
+              {submitting ? "생성중..." : "생성"}
+            </button>
+            <button
+              onClick={() => setShowNewForm(false)}
+              className="border border-gray-300 text-gray-700 px-6 py-2 rounded-lg text-sm font-medium hover:bg-gray-50"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 팀 역할 구조 */}
       <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
         <h3 className="text-lg font-semibold mb-4">연구팀 역할 구조</h3>
         <div className="flex justify-center mb-4">
@@ -100,7 +196,7 @@ export default function ResearchPage() {
           </div>
         </div>
         <div className="flex justify-center mb-2">
-          <span className="text-gray-300">↓</span>
+          <span className="text-gray-300">&darr;</span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {roles.map((role) => (
@@ -116,94 +212,113 @@ export default function ResearchPage() {
       </div>
 
       {/* 회의실 라운드 구조 */}
-      <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
-        <h3 className="text-lg font-semibold mb-4">
-          Conference Rounds — {selectedProject.title}
-        </h3>
-        <div className="flex gap-4">
-          {([1, 2, 3, 4] as Round[]).map((round) => (
-            <div
-              key={round}
-              className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
-                selectedProject.currentRound === round
-                  ? "border-purple-500 bg-purple-50"
-                  : selectedProject.currentRound > round
-                    ? "border-green-300 bg-green-50"
-                    : "border-gray-200 bg-gray-50"
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    selectedProject.currentRound === round
-                      ? "bg-purple-600 text-white"
-                      : selectedProject.currentRound > round
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-300 text-white"
-                  }`}
-                >
-                  {selectedProject.currentRound > round ? "✓" : round}
-                </span>
-                <span className="text-sm font-bold text-gray-700">
-                  Round {round}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600">{roundLabels[round]}</p>
-              {selectedProject.currentRound === round && (
-                <span className="inline-block mt-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
-                  진행중
-                </span>
-              )}
-            </div>
-          ))}
+      {loading ? (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 text-center text-gray-500">
+          로딩중...
         </div>
-        <p className="text-xs text-gray-500 mt-3">
-          * Round 3-4는 품질 기준 충족까지 반복 · 모든 회의 내용은 Scribe가
-          실시간 기록
-        </p>
-      </div>
+      ) : selectedProject ? (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+          <h3 className="text-lg font-semibold mb-4">
+            Conference Rounds — {selectedProject.title}
+          </h3>
+          <div className="flex gap-4">
+            {([1, 2, 3, 4] as Round[]).map((round) => (
+              <div
+                key={round}
+                className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
+                  selectedProject.currentRound === round
+                    ? "border-purple-500 bg-purple-50"
+                    : selectedProject.currentRound > round
+                      ? "border-green-300 bg-green-50"
+                      : "border-gray-200 bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      selectedProject.currentRound === round
+                        ? "bg-purple-600 text-white"
+                        : selectedProject.currentRound > round
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-300 text-white"
+                    }`}
+                  >
+                    {selectedProject.currentRound > round ? "\u2713" : round}
+                  </span>
+                  <span className="text-sm font-bold text-gray-700">
+                    Round {round}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600">{roundLabels[round]}</p>
+                {selectedProject.currentRound === round && (
+                  <span className="inline-block mt-2 text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                    진행중
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            * Round 3-4는 품질 기준 충족까지 반복 · 모든 회의 내용은 Scribe가
+            실시간 기록
+          </p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6 text-center text-gray-500">
+          프로젝트를 선택하면 라운드 진행 상황이 표시됩니다.
+        </div>
+      )}
 
       {/* 연구 프로젝트 목록 */}
       <div className="bg-white rounded-xl p-6 border border-gray-200">
         <h3 className="text-lg font-semibold mb-4">연구 프로젝트 목록</h3>
-        <div className="space-y-3">
-          {sampleProjects.map((project) => (
-            <div
-              key={project.id}
-              onClick={() => setSelectedProject(project)}
-              className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                selectedProject.id === project.id
-                  ? "border-purple-500 bg-purple-50"
-                  : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium text-gray-900">
-                    {project.title}
-                  </h4>
-                  <p className="text-sm text-gray-500 mt-1">
-                    참여 인원: {project.members}명 · Round{" "}
-                    {project.currentRound} 진행중
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-24 bg-gray-100 rounded-full h-2">
-                    <div
-                      className="bg-purple-500 h-2 rounded-full"
-                      style={{
-                        width: `${(project.currentRound / 4) * 100}%`,
-                      }}
-                    />
+        {loading ? (
+          <div className="text-center text-gray-500 py-8">로딩중...</div>
+        ) : projects.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            등록된 연구 프로젝트가 없습니다. &quot;새 연구 프로젝트&quot; 버튼을
+            눌러 프로젝트를 추가해 주세요.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                onClick={() => handleSelectProject(project)}
+                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                  selectedProject?.id === project.id
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">
+                      {project.title}
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                      참여 인원: {project.members}명 · Round{" "}
+                      {project.currentRound} 진행중
+                    </p>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {Math.round((project.currentRound / 4) * 100)}%
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-purple-500 h-2 rounded-full"
+                        style={{
+                          width: `${(project.currentRound / 4) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {Math.round((project.currentRound / 4) * 100)}%
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

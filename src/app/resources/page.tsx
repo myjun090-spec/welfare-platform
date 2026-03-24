@@ -1,9 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type ResourceType = "government" | "local" | "institution";
 type Step = 1 | 2 | 3 | 4 | 5;
+
+interface Resource {
+  id: string;
+  name: string;
+  type: ResourceType;
+  category: string | null;
+  target: string | null;
+  ageRange: string | null;
+  incomeLevel: string | null;
+  lifecycle: string | null;
+  description: string | null;
+  howToApply: string | null;
+  contact: string | null;
+  manager: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Linkage {
+  id: string;
+  clientId: string;
+  resourceId: string;
+  status: string;
+  assignedTo: string | null;
+  memo: string | null;
+  createdAt: string;
+  client?: { id: string; name: string };
+  resource?: Resource;
+}
 
 const stepLabels: Record<Step, string> = {
   1: "이용자 초기상담",
@@ -13,63 +43,6 @@ const stepLabels: Record<Step, string> = {
   5: "모니터링·기록",
 };
 
-const sampleResources = [
-  {
-    id: 1,
-    name: "긴급복지 지원",
-    type: "government" as ResourceType,
-    target: "저소득층",
-    ageRange: "전연령",
-    income: "중위소득 75% 이하",
-    description: "긴급한 생계곤란 등의 위기상황에 처한 저소득층 지원",
-  },
-  {
-    id: 2,
-    name: "무료진료소",
-    type: "local" as ResourceType,
-    target: "의료취약계층",
-    ageRange: "전연령",
-    income: "제한없음",
-    description: "지역 무료진료소 연계 서비스",
-  },
-  {
-    id: 3,
-    name: "푸드뱅크",
-    type: "local" as ResourceType,
-    target: "결식우려자",
-    ageRange: "전연령",
-    income: "중위소득 50% 이하",
-    description: "식품 지원 서비스",
-  },
-  {
-    id: 4,
-    name: "사례관리 프로그램",
-    type: "institution" as ResourceType,
-    target: "복합욕구 대상자",
-    ageRange: "성인",
-    income: "제한없음",
-    description: "기관 사례관리 집중 지원",
-  },
-  {
-    id: 5,
-    name: "기초생활보장",
-    type: "government" as ResourceType,
-    target: "저소득층",
-    ageRange: "전연령",
-    income: "중위소득 30% 이하",
-    description: "생계·의료·주거·교육급여 지원",
-  },
-  {
-    id: 6,
-    name: "집단프로그램",
-    type: "institution" as ResourceType,
-    target: "아동·청소년",
-    ageRange: "7-18세",
-    income: "제한없음",
-    description: "사회성 향상 및 자존감 증진 집단 프로그램",
-  },
-];
-
 export default function ResourcesPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [filters, setFilters] = useState({
@@ -78,18 +51,104 @@ export default function ResourcesPage() {
     lifecycle: "",
     type: "" as ResourceType | "",
   });
-  const [searchResults, setSearchResults] = useState(sampleResources);
-  const [selectedResource, setSelectedResource] = useState<
-    (typeof sampleResources)[0] | null
-  >(null);
+  const [searchResults, setSearchResults] = useState<Resource[]>([]);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(
+    null
+  );
+  const [loading, setLoading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState("");
 
-  const handleSearch = () => {
-    let results = sampleResources;
-    if (filters.type) {
-      results = results.filter((r) => r.type === filters.type);
+  // Linkage form state
+  const [linkageAssignedTo, setLinkageAssignedTo] = useState("");
+  const [linkageDate, setLinkageDate] = useState("");
+  const [linkageMemo, setLinkageMemo] = useState("");
+  const [linkageCreating, setLinkageCreating] = useState(false);
+  const [createdLinkage, setCreatedLinkage] = useState<Linkage | null>(null);
+
+  // Load all resources on mount
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchResources = async (params?: Record<string, string>) => {
+    setLoading(true);
+    try {
+      const query = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value) query.set(key, value);
+        });
+      }
+      const url = `/api/resources${query.toString() ? `?${query.toString()}` : ""}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch resources:", err);
+    } finally {
+      setLoading(false);
     }
-    setSearchResults(results);
+  };
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    setSeedMessage("");
+    try {
+      const res = await fetch("/api/seed");
+      const data = await res.json();
+      setSeedMessage(data.message || "시드 데이터 로드 완료");
+      // Reload resources after seeding
+      await fetchResources();
+    } catch (err) {
+      console.error("Seed failed:", err);
+      setSeedMessage("시드 데이터 로드 실패");
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    const params: Record<string, string> = {};
+    if (filters.type) params.type = filters.type;
+    if (filters.age) params.ageRange = filters.age;
+    if (filters.income) params.incomeLevel = filters.income;
+    if (filters.lifecycle) params.lifecycle = filters.lifecycle;
+    await fetchResources(params);
     setCurrentStep(3);
+  };
+
+  const handleCreateLinkage = async () => {
+    if (!selectedResource) return;
+    setLinkageCreating(true);
+    try {
+      // Use a placeholder clientId since the current UI doesn't have full client management
+      const res = await fetch("/api/linkages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: "placeholder-client",
+          resourceId: selectedResource.id,
+          assignedTo: linkageAssignedTo || undefined,
+          memo: linkageMemo || undefined,
+        }),
+      });
+      if (res.ok) {
+        const linkage = await res.json();
+        setCreatedLinkage(linkage);
+        setCurrentStep(5);
+      } else {
+        const err = await res.json();
+        alert(`연계 생성 실패: ${err.error || "알 수 없는 오류"}`);
+      }
+    } catch (err) {
+      console.error("Failed to create linkage:", err);
+      alert("연계 생성 중 오류가 발생했습니다.");
+    } finally {
+      setLinkageCreating(false);
+    }
   };
 
   const typeLabel: Record<ResourceType, string> = {
@@ -106,9 +165,23 @@ export default function ResourcesPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        복지자원 통합 검색
-      </h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          복지자원 통합 검색
+        </h2>
+        <div className="flex items-center gap-3">
+          {seedMessage && (
+            <span className="text-sm text-gray-600">{seedMessage}</span>
+          )}
+          <button
+            onClick={handleSeed}
+            disabled={seeding}
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
+          >
+            {seeding ? "로딩중..." : "시드 데이터 로드"}
+          </button>
+        </div>
+      </div>
 
       {/* 5단계 프로세스 표시 */}
       <div className="flex items-center mb-8 bg-white rounded-xl p-4 border border-gray-200">
@@ -292,9 +365,10 @@ export default function ResourcesPage() {
             </button>
             <button
               onClick={handleSearch}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+              disabled={loading}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
-              통합 검색 →
+              {loading ? "검색중..." : "통합 검색 →"}
             </button>
           </div>
         </div>
@@ -306,34 +380,57 @@ export default function ResourcesPage() {
           <h3 className="text-lg font-semibold mb-4">
             검색 결과 ({searchResults.length}건)
           </h3>
-          <div className="space-y-3">
-            {searchResults.map((resource) => (
-              <div
-                key={resource.id}
-                onClick={() => setSelectedResource(resource)}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedResource?.id === resource.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
+          {loading ? (
+            <p className="text-gray-500 text-sm py-8 text-center">
+              검색중...
+            </p>
+          ) : searchResults.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-sm mb-3">
+                검색 결과가 없습니다.
+              </p>
+              <button
+                onClick={handleSeed}
+                disabled={seeding}
+                className="text-blue-600 text-sm underline hover:text-blue-800"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">{resource.name}</h4>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${typeColor[resource.type]}`}
-                  >
-                    {typeLabel[resource.type]}
-                  </span>
+                시드 데이터를 로드해 보세요
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {searchResults.map((resource) => (
+                <div
+                  key={resource.id}
+                  onClick={() => setSelectedResource(resource)}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedResource?.id === resource.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium text-gray-900">
+                      {resource.name}
+                    </h4>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${typeColor[resource.type] || "bg-gray-100 text-gray-700"}`}
+                    >
+                      {typeLabel[resource.type] || resource.type}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {resource.description}
+                  </p>
+                  <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                    <span>대상: {resource.target || "-"}</span>
+                    <span>연령: {resource.ageRange || "-"}</span>
+                    <span>소득: {resource.incomeLevel || "-"}</span>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-600">{resource.description}</p>
-                <div className="flex gap-4 mt-2 text-xs text-gray-500">
-                  <span>대상: {resource.target}</span>
-                  <span>연령: {resource.ageRange}</span>
-                  <span>소득: {resource.income}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => setCurrentStep(2)}
@@ -373,6 +470,8 @@ export default function ResourcesPage() {
                 type="text"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 placeholder="담당 복지사"
+                value={linkageAssignedTo}
+                onChange={(e) => setLinkageAssignedTo(e.target.value)}
               />
             </div>
             <div>
@@ -382,6 +481,8 @@ export default function ResourcesPage() {
               <input
                 type="date"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                value={linkageDate}
+                onChange={(e) => setLinkageDate(e.target.value)}
               />
             </div>
             <div className="col-span-2">
@@ -392,6 +493,8 @@ export default function ResourcesPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                 rows={3}
                 placeholder="연계 관련 특이사항"
+                value={linkageMemo}
+                onChange={(e) => setLinkageMemo(e.target.value)}
               />
             </div>
           </div>
@@ -403,10 +506,11 @@ export default function ResourcesPage() {
               ← 이전
             </button>
             <button
-              onClick={() => setCurrentStep(5)}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+              onClick={handleCreateLinkage}
+              disabled={linkageCreating}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
             >
-              연계 확정 →
+              {linkageCreating ? "연계 생성중..." : "연계 확정 →"}
             </button>
           </div>
         </div>
@@ -423,6 +527,25 @@ export default function ResourcesPage() {
             <p className="text-green-600 text-sm mt-1">
               {selectedResource?.name} → 이용자 연계 확정
             </p>
+            {createdLinkage && (
+              <div className="mt-2 text-sm text-green-700">
+                <p>연계 ID: {createdLinkage.id}</p>
+                <p>
+                  상태:{" "}
+                  {createdLinkage.status === "pending"
+                    ? "대기중"
+                    : createdLinkage.status === "linked"
+                      ? "연계완료"
+                      : createdLinkage.status === "monitoring"
+                        ? "모니터링"
+                        : createdLinkage.status}
+                </p>
+                {createdLinkage.assignedTo && (
+                  <p>담당자: {createdLinkage.assignedTo}</p>
+                )}
+                {createdLinkage.memo && <p>메모: {createdLinkage.memo}</p>}
+              </div>
+            )}
           </div>
           <div className="space-y-4">
             <div>
@@ -449,7 +572,14 @@ export default function ResourcesPage() {
           </div>
           <div className="flex gap-3 mt-6">
             <button
-              onClick={() => setCurrentStep(1)}
+              onClick={() => {
+                setCurrentStep(1);
+                setSelectedResource(null);
+                setCreatedLinkage(null);
+                setLinkageAssignedTo("");
+                setLinkageDate("");
+                setLinkageMemo("");
+              }}
               className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
             >
               새 상담 시작
