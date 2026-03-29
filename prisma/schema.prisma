@@ -268,3 +268,45 @@ model ActivityLog {
 
   user      User?    @relation(fields: [userId], references: [id])
 }
+
+// ========== 지식 베이스 (Knowledge Base) ==========
+
+model KnowledgeDocument {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String   // 보고서, 회의록, 사례기록, 법령, 매뉴얼
+  summary     String?
+  entities    KnowledgeEntity[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model KnowledgeEntity {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // 기관, 서비스, 대상자유형, 지역, 법제도, 인물
+  documentId  String
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([type])
+  @@index([name])
+}
+
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  structure   String   // JSON structure
+  category    String   // 사업계획, 결과보고, 회의록, 자원연계, 봉사관리
+  createdAt   DateTime @default(now())
+}
+
+model GeneratedDocument {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  templateId  String?
+  createdAt   DateTime @default(now())
+}

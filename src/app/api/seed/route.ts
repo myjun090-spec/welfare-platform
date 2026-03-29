@@ -404,7 +404,206 @@ export async function GET() {
       });
       results.linkages = 6;
 
-      // ========== 6. 활동 로그 ==========
+      // ========== 6. 지식 베이스 시드 데이터 ==========
+      const existingKnowledgeDocs = await prisma.knowledgeDocument.count();
+      if (existingKnowledgeDocs === 0) {
+        const kDoc1 = await prisma.knowledgeDocument.create({
+          data: {
+            title: "2026년 긴급복지지원 사업 운영 안내",
+            type: "매뉴얼",
+            summary: "보건복지부의 2026년 긴급복지지원 사업 운영 지침으로, 위기가구 대상 생계·의료·주거 등 지원 절차와 기준을 안내합니다.",
+            content: "보건복지부에서는 2026년도 긴급복지지원 사업을 다음과 같이 운영합니다. 긴급복지지원법 제2조에 따라 생계곤란 등 위기상황에 처한 저소득 가구에 생계비, 의료비, 주거비 등을 신속하게 지원합니다. 지원 대상은 기준중위소득 75% 이하 가구이며, 주민센터 방문 또는 129 전화를 통해 신청할 수 있습니다. 서울특별시, 경기도 등 각 지자체별로 추가 지원 사업도 운영되고 있으며, 사회복지관과 주민센터가 주요 연계 창구 역할을 합니다. 담당자 김복지 사회복지사가 관악구 지역을 담당하고 있습니다.",
+            entities: {
+              create: [
+                { name: "보건복지부", type: "기관" },
+                { name: "긴급복지지원법", type: "법제도" },
+                { name: "저소득 가구", type: "대상자유형" },
+                { name: "서울특별시", type: "지역" },
+                { name: "경기도", type: "지역" },
+                { name: "긴급복지지원", type: "서비스" },
+                { name: "김복지", type: "인물" },
+              ],
+            },
+          },
+        });
+
+        const kDoc2 = await prisma.knowledgeDocument.create({
+          data: {
+            title: "지역사회 통합돌봄 사례회의 기록",
+            type: "회의록",
+            summary: "관악구 통합돌봄 대상자 3명에 대한 사례회의록으로, 각 대상자별 서비스 계획과 자원연계 방안이 논의되었습니다.",
+            content: "2026년 3월 15일 관악구 사회복지관에서 지역사회 통합돌봄 사례회의를 진행하였습니다. 참석자: 김복지(사회복지사), 이상담(상담사), 박연구(연구원). 대상자 1: 김OO(78세, 독거노인) - 노인돌봄종합서비스 연계 및 무료급식소 이용 안내. 건강상태 모니터링 필요. 대상자 2: 이OO(35세, 한부모) - 한부모가족 지원사업 신청 지원 및 지역아동센터 연계. 대상자 3: 박OO(45세) - 주거취약계층 주거지원 및 정신건강복지센터 상담 연계. 노인복지법 및 한부모가족지원법에 근거하여 서비스를 제공하기로 합의하였습니다.",
+            entities: {
+              create: [
+                { name: "관악구 사회복지관", type: "기관" },
+                { name: "김복지", type: "인물" },
+                { name: "이상담", type: "인물" },
+                { name: "박연구", type: "인물" },
+                { name: "독거노인", type: "대상자유형" },
+                { name: "한부모가족", type: "대상자유형" },
+                { name: "노인복지법", type: "법제도" },
+                { name: "한부모가족지원법", type: "법제도" },
+                { name: "관악구", type: "지역" },
+                { name: "노인돌봄종합서비스", type: "서비스" },
+              ],
+            },
+          },
+        });
+
+        const kDoc3 = await prisma.knowledgeDocument.create({
+          data: {
+            title: "아동보호체계 강화 방안 보고서",
+            type: "보고서",
+            summary: "아동학대 예방 및 보호체계 강화를 위한 정책 제안 보고서로, 드림스타트와 지역아동센터의 역할 확대를 제안합니다.",
+            content: "본 보고서는 아동복지법에 근거한 아동보호체계 강화 방안을 제시합니다. 최근 3년간 아동학대 신고 건수가 지속적으로 증가하고 있으며, 특히 영유아 및 초등 저학년 아동의 보호 사각지대가 발생하고 있습니다. 드림스타트 프로그램과 지역아동센터를 통한 예방적 개입이 효과적이며, 보건복지부와 여성가족부의 협력체계 구축이 필요합니다. 서울시 구로구와 금천구 지역에서 시범사업을 추진하고 있으며, 아동보호전문기관과의 연계 강화가 필수적입니다. 담당 연구원 박연구가 현장 조사를 수행하였습니다.",
+            entities: {
+              create: [
+                { name: "아동복지법", type: "법제도" },
+                { name: "드림스타트", type: "서비스" },
+                { name: "지역아동센터", type: "기관" },
+                { name: "보건복지부", type: "기관" },
+                { name: "여성가족부", type: "기관" },
+                { name: "아동", type: "대상자유형" },
+                { name: "구로구", type: "지역" },
+                { name: "금천구", type: "지역" },
+                { name: "박연구", type: "인물" },
+              ],
+            },
+          },
+        });
+
+        const kDoc4 = await prisma.knowledgeDocument.create({
+          data: {
+            title: "장애인 자립생활 지원 사례기록",
+            type: "사례기록",
+            summary: "영등포구 거주 장애인 2명의 자립생활 지원 과정과 활동지원서비스 연계 결과를 기록합니다.",
+            content: "사례기록일: 2026년 3월 20일. 대상자 A(30대, 지체장애 2급): 장애인활동지원서비스를 통해 주 30시간 활동보조 서비스 제공 중. 국민건강보험공단을 통해 신청하였으며, 현재 독립생활 유지 중. 대상자 B(40대, 정신장애 3급): 정신건강복지센터와 연계하여 상담 및 재활 프로그램 참여 중. 장애인복지법 제55조에 따른 자립생활 지원센터 이용을 안내하였습니다. 영등포구 장애인복지관에서 직업훈련 프로그램도 병행하고 있습니다. 사회복지사 이상담이 담당하고 있습니다.",
+            entities: {
+              create: [
+                { name: "장애인활동지원서비스", type: "서비스" },
+                { name: "국민건강보험공단", type: "기관" },
+                { name: "정신건강복지센터", type: "기관" },
+                { name: "장애인복지법", type: "법제도" },
+                { name: "장애인", type: "대상자유형" },
+                { name: "영등포구", type: "지역" },
+                { name: "영등포구 장애인복지관", type: "기관" },
+                { name: "이상담", type: "인물" },
+              ],
+            },
+          },
+        });
+
+        const kDoc5 = await prisma.knowledgeDocument.create({
+          data: {
+            title: "긴급복지지원법 주요 조항 해설",
+            type: "법령",
+            summary: "긴급복지지원법의 주요 조항을 해설하고, 지원 대상 및 절차, 각 지원 유형별 기준을 안내합니다.",
+            content: "긴급복지지원법은 생계곤란 등의 위기상황에 처하여 도움이 필요한 사람을 신속하게 지원함으로써 이들이 위기상황에서 벗어나 건강하고 인간다운 생활을 하게 함을 목적으로 합니다. 제2조(정의): 위기상황이란 본인 또는 가구 구성원이 주소득자의 사망, 가출, 행방불명 등의 사유로 생계유지가 어려운 경우를 말합니다. 제9조(긴급지원의 종류): 생계지원, 의료지원, 주거지원, 사회복지시설이용지원, 교육지원 등이 있습니다. 보건복지부장관, 시도지사, 시장군수구청장이 지원을 실시합니다. 지원 기준은 기준중위소득 75% 이하이며, 주민센터를 통해 신청할 수 있습니다.",
+            entities: {
+              create: [
+                { name: "긴급복지지원법", type: "법제도" },
+                { name: "보건복지부", type: "기관" },
+                { name: "위기가구", type: "대상자유형" },
+                { name: "생계지원", type: "서비스" },
+                { name: "의료지원", type: "서비스" },
+                { name: "주거지원", type: "서비스" },
+              ],
+            },
+          },
+        });
+
+        results.knowledgeDocuments = 5;
+        results.knowledgeEntities = [kDoc1, kDoc2, kDoc3, kDoc4, kDoc5].reduce(
+          (sum) => sum, 0
+        );
+      }
+
+      // ========== 7. 문서 템플릿 시드 ==========
+      const existingTemplates = await prisma.documentTemplate.count();
+      if (existingTemplates === 0) {
+        await prisma.documentTemplate.createMany({
+          data: [
+            {
+              name: "사업계획서",
+              description: "복지 사업의 목적, 대상, 내용, 예산 등을 포함한 사업계획 문서",
+              category: "사업계획",
+              structure: JSON.stringify({
+                sections: [
+                  { title: "사업 개요", fields: ["사업명", "사업기간", "사업목적"] },
+                  { title: "사업 배경 및 필요성", fields: ["현황분석", "필요성"] },
+                  { title: "사업 대상", fields: ["대상자유형", "선정기준", "인원"] },
+                  { title: "사업 내용", fields: ["주요프로그램", "세부활동", "일정"] },
+                  { title: "예산 계획", fields: ["총예산", "항목별예산"] },
+                  { title: "기대 효과", fields: ["정량적목표", "정성적목표"] },
+                ],
+              }),
+            },
+            {
+              name: "결과보고서",
+              description: "사업 수행 결과를 정리하고 성과를 분석한 보고서",
+              category: "결과보고",
+              structure: JSON.stringify({
+                sections: [
+                  { title: "사업 개요", fields: ["사업명", "사업기간", "담당자"] },
+                  { title: "추진 경과", fields: ["주요일정", "추진내용"] },
+                  { title: "사업 실적", fields: ["참여인원", "활동횟수", "주요성과"] },
+                  { title: "예산 집행", fields: ["집행총액", "항목별집행"] },
+                  { title: "평가 및 분석", fields: ["목표달성도", "만족도", "개선점"] },
+                  { title: "향후 계획", fields: ["개선방향", "차기계획"] },
+                ],
+              }),
+            },
+            {
+              name: "사례회의록",
+              description: "클라이언트 사례에 대한 회의 내용과 결정사항을 기록한 문서",
+              category: "회의록",
+              structure: JSON.stringify({
+                sections: [
+                  { title: "회의 정보", fields: ["회의일시", "참석자", "회의장소"] },
+                  { title: "사례 개요", fields: ["대상자정보", "의뢰경위", "주요문제"] },
+                  { title: "사정 내용", fields: ["욕구분석", "강점", "위험요인"] },
+                  { title: "서비스 계획", fields: ["목표", "개입방법", "담당자"] },
+                  { title: "논의 내용", fields: ["주요의견", "쟁점사항"] },
+                  { title: "결정사항", fields: ["합의내용", "역할분담", "일정"] },
+                ],
+              }),
+            },
+            {
+              name: "자원연계보고서",
+              description: "복지 자원 연계 과정과 결과를 기록한 보고서",
+              category: "자원연계",
+              structure: JSON.stringify({
+                sections: [
+                  { title: "연계 개요", fields: ["연계일자", "담당자", "연계유형"] },
+                  { title: "대상자 정보", fields: ["이름", "연령", "주요욕구", "위기수준"] },
+                  { title: "연계 자원", fields: ["자원명", "자원유형", "제공기관"] },
+                  { title: "연계 과정", fields: ["접수경위", "사정내용", "연계절차"] },
+                  { title: "연계 결과", fields: ["서비스내용", "이용자반응"] },
+                  { title: "모니터링", fields: ["모니터링일정", "추후계획"] },
+                ],
+              }),
+            },
+            {
+              name: "자원봉사자관리보고서",
+              description: "자원봉사자 활동 현황과 관리 내용을 정리한 보고서",
+              category: "봉사관리",
+              structure: JSON.stringify({
+                sections: [
+                  { title: "보고 개요", fields: ["보고기간", "작성자", "작성일"] },
+                  { title: "봉사자 현황", fields: ["총인원", "신규", "퇴직", "활동중"] },
+                  { title: "활동 실적", fields: ["총활동시간", "활동분야", "주요활동"] },
+                  { title: "교육 및 훈련", fields: ["교육프로그램", "참여인원"] },
+                  { title: "우수사례", fields: ["우수봉사자", "활동내용", "성과"] },
+                  { title: "과제 및 계획", fields: ["문제점", "개선방안", "향후계획"] },
+                ],
+              }),
+            },
+          ],
+        });
+        results.documentTemplates = 5;
+      }
+
+      // ========== 8. 활동 로그 ==========
       await prisma.activityLog.createMany({
         data: [
           { userId: users[1].id, module: "resources", action: "search", target: "복지자원 통합 검색", details: "노인돌봄 관련 자원 3건 검색" },
@@ -430,6 +629,28 @@ export async function GET() {
         results.message = "이미 목업 데이터가 존재합니다";
         results.existingUsers = existingUsers;
         results.existingResources = existingResources;
+      }
+
+      // 지식 베이스 데이터가 없으면 별도로 시드
+      const existingKnowledgeDocs2 = await prisma.knowledgeDocument.count();
+      if (existingKnowledgeDocs2 === 0) {
+        await prisma.knowledgeDocument.create({
+          data: {
+            title: "2026년 긴급복지지원 사업 운영 안내",
+            type: "매뉴얼",
+            summary: "보건복지부의 2026년 긴급복지지원 사업 운영 지침입니다.",
+            content: "보건복지부에서는 2026년도 긴급복지지원 사업을 다음과 같이 운영합니다. 긴급복지지원법 제2조에 따라 생계곤란 등 위기상황에 처한 저소득 가구에 생계비, 의료비, 주거비 등을 신속하게 지원합니다.",
+            entities: {
+              create: [
+                { name: "보건복지부", type: "기관" },
+                { name: "긴급복지지원법", type: "법제도" },
+                { name: "저소득 가구", type: "대상자유형" },
+                { name: "긴급복지지원", type: "서비스" },
+              ],
+            },
+          },
+        });
+        results.knowledgeDocuments = 1;
       }
     }
 

@@ -9,6 +9,8 @@ const navItems = [
   { href: "/volunteers", label: "자원봉사자 관리", icon: "🤝" },
   { href: "/research", label: "논문/연구", icon: "📝" },
   { href: "/teams", label: "팀 협업", icon: "👥" },
+  { href: "/knowledge", label: "지식관리", icon: "🧠" },
+  { href: "/documents", label: "문서생성", icon: "📄" },
 ];
 
 export default function Sidebar() {
