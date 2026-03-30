@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { markdownToHwpx } from "kordoc";
+
 
 interface Template {
   id: string;
@@ -28,7 +28,7 @@ interface GeneratedDoc {
   createdAt: string;
 }
 
-export default function DocumentGeneratePage() {
+function DocumentGenerateContent() {
   const searchParams = useSearchParams();
   const preselectedTemplateId = searchParams.get("templateId");
   const docId = searchParams.get("docId");
@@ -166,8 +166,16 @@ export default function DocumentGeneratePage() {
 
   const handleExport = async () => {
     const content = editContent || generatedDoc?.content || "";
-    const hwpxBuffer = await markdownToHwpx(content);
-    const blob = new Blob([hwpxBuffer], { type: "application/hwp+zip" });
+    const res = await fetch("/api/documents/export-hwpx", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content, title: title || "문서" }),
+    });
+    if (!res.ok) {
+      setError("HWPX 내보내기에 실패했습니다.");
+      return;
+    }
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -364,5 +372,15 @@ export default function DocumentGeneratePage() {
         </div>
       )}
     </div>
+  );
+}
+
+import { Suspense } from "react";
+
+export default function DocumentGeneratePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><p className="text-gray-400">로딩중...</p></div>}>
+      <DocumentGenerateContent />
+    </Suspense>
   );
 }

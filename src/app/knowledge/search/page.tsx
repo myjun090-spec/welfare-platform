@@ -18,7 +18,7 @@ interface RAGResponse {
   relatedEntities: string[];
 }
 
-export default function KnowledgeSearchPage() {
+function KnowledgeSearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -294,5 +294,15 @@ export default function KnowledgeSearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+import { Suspense } from "react";
+
+export default function KnowledgeSearchPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center py-20"><p className="text-gray-400">로딩중...</p></div>}>
+      <KnowledgeSearchContent />
+    </Suspense>
   );
 }
