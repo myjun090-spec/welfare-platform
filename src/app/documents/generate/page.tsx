@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { markdownToHwpx } from "kordoc";
 
 interface Template {
   id: string;
@@ -163,13 +164,14 @@ export default function DocumentGeneratePage() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const content = editContent || generatedDoc?.content || "";
-    const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+    const hwpxBuffer = await markdownToHwpx(content);
+    const blob = new Blob([hwpxBuffer], { type: "application/hwp+zip" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${title || "문서"}.md`;
+    a.download = `${title || "문서"}.hwpx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -206,7 +208,7 @@ export default function DocumentGeneratePage() {
               onClick={handleExport}
               className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
             >
-              다운로드 (.md)
+              다운로드 (.hwpx)
             </button>
             <Link
               href="/documents"
